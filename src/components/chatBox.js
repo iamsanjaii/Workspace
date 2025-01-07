@@ -2,17 +2,19 @@ import React from 'react';
 import { StyleSheet, View,Text,Image, TouchableOpacity} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import moment from 'moment';
+import defaultimage from '../../assets/1.jpg'
 
 
-const ChatBox = ({ name, avatar, navigation , timestamp, lastmessage, isown, allmessage}) => {
+const ChatBox = ({ name, avatar, navigation, linktoChat}) => {
+   
     return (
-        <TouchableOpacity onPress={() => navigation.navigate('Message', { userName: name, profile:avatar, isown:isown, allmessage:allmessage, timestamp:timestamp})}>
+        <TouchableOpacity onPress={() => {linktoChat()}}>
             <View style={styles.ChatContainer}>
-                <Image source={avatar} style={styles.avatar} />
+                <Image source={avatar ? avatar : defaultimage} style={styles.avatar} />
                 <View style={styles.chatTextContainer}>
                     <Text style={{ fontSize: 16, fontWeight: '600' }}>{name}</Text>
-                    <Text style={{ fontSize: 12, fontWeight: '300', color: '#625F5F' }}>{lastmessage}</Text>
-                    <Text style={{ fontSize: 9, fontWeight: '400', color: '#625F5F', textAlign: 'right' }}>{moment(timestamp).format('HH:mm')}</Text>
+                    <Text style={{ fontSize: 12, fontWeight: '300', color: '#625F5F' }}>Hi Sanjai</Text>
+                    <Text style={{ fontSize: 9, fontWeight: '400', color: '#625F5F', textAlign: 'right' }}>offline</Text>
                 </View>
             </View>
         </TouchableOpacity>
