@@ -16,106 +16,44 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { io } from "socket.io-client";
 import moment from "moment";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import defaultImage from '../../assets/user.png'
+import { useChatStore } from "../store/useChatstore";
+import Loading from "../screens/loading";
+import { useAuthStore } from "../store/useAuthstore";
 
 const MessageScreen = () => {
   const navigation = useNavigation();
-  const route = useRoute();
-  const { userName, profile, id, allmessage } = route.params;
   const [message, setMessage] = useState("");
-  const [senderid, setSenderid] = useState("");
-  const [messageData, setMessageData] = useState([]);
-  const [feedback, setFeedback] = useState("");
   const scrollViewRef = useRef();
   const typingTimeoutRef = useRef(null);
-  const [isConnected, setIsConnected] = useState(false);
 
-  const socket = useMemo(() => io("http://localhost:4800"), []);
-
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const userId = await AsyncStorage.getItem("userId");
-        setSenderid(userId);
-      } catch (error) {
-        console.error("Error getting sender's ID:", error);
-      }
-    };
-    fetchUser();
-  }, []);
-
-  console.log('The Messages', allmessage)
-  useEffect(() => {
-    console.log("Raw allmessage data:", allmessage);
-    console.log("Type of allmessage:", Array.isArray(allmessage) ? "Array" : typeof allmessage);
-  }, [allmessage]);
-  
+  const { authUser, onlineUsers } = useAuthStore();
+  const {
+    messages,
+    getMessages,
+    ismessageLoading,
+    selectedUser,
+    setSelectedUser,
+    listenMessage,
+    unlistenMessage,
+    sendMessage,
+  } = useChatStore();
 
   useEffect(() => {
-    if (allmessage) {
-      const messages = Array.isArray(allmessage) ? allmessage : [allmessage];
-  
-      const formattedMessages = messages.map((msg) => ({
-        text: msg.message,
-        isOwnMessage: msg.is_own_message,
-        time: moment(msg.timestamp).format("HH:mm"),
-      }));
-  
-      setMessageData((prevMessages) => [...formattedMessages, ...prevMessages]);
-    } else {
-      console.log("No valid allmessage data");
-    }
-  }, [allmessage]);
-  
-  
-  
-  
+    getMessages(selectedUser._id);
+    listenMessage();
 
-
-  console.log("message data",messageData)
+    return () => unlistenMessage();
+  }, [selectedUser._id, getMessages, listenMessage, unlistenMessage]);
 
   useEffect(() => {
-    if (!socket) {
-      console.error("Socket is not initialized!");
-      return;
-    }
-    socket.on("connect", () => {
-      console.log("Socket Connected:", socket.id);
-      setIsConnected(true);
-    });
-
-    socket.on("receive-message", (data) => {
-      setMessageData((prev) => [
-        ...prev,
-        {
-          text: data.messageInput,
-          isOwnMessage: false,
-          time: moment().format("HH:mm"),
-        },
-      ]);
-    });
-
-    socket.on("user-feedback", (data) => {
-      setFeedback(data.feedback || "");
-    });
-
-    socket.on("disconnect", () => {
-      console.log("Socket Disconnected");
-      setIsConnected(false);
-    });
-
-    return () => {
-      socket.disconnect();
-    };
-  }, [socket]);
-
-  useEffect(() => {
-    if (scrollViewRef.current) {
+    if (scrollViewRef.current && messages) {
       scrollViewRef.current.scrollToEnd({ animated: true });
     }
-  }, [messageData]);
+  }, [messages]);
 
   const handleBackPress = () => {
+    setSelectedUser(null);
     navigation.goBack();
   };
 
@@ -123,29 +61,18 @@ const MessageScreen = () => {
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     }
-    socket.emit("feedback", { feedback: "Typing" });
-
-    typingTimeoutRef.current = setTimeout(() => {
-      socket.emit("feedback", { feedback: "" });
-    }, 2000);
   };
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (message.trim() === "") return;
-    const data = {
-      receiver_id: id,
-      sender_id: senderid,
-      messageInput: message,
-    };
-    socket.emit("message", data);
-    setMessageData((prev) => [
-      ...prev,
-      { text: message, isOwnMessage: true, time: moment().format("HH:mm") },
-    ]);
-    setMessage("");
-    setTimeout(() => {
-      scrollViewRef.current?.scrollToEnd({ animated: true });
-    }, 100);
+    try {
+      await sendMessage({
+        text: message.trim(),
+      });
+      setMessage("");
+    } catch (error) {
+      console.log("Failed to Send Message", error);
+    }
   };
 
   return (
@@ -162,30 +89,50 @@ const MessageScreen = () => {
 
           <View style={styles.UserContainer}>
             <View style={styles.TextInfoContainer}>
-              <Text style={styles.UserText}>{userName}</Text>
-              <Text style={styles.onlineText}>
-                <View style={styles.OnlineCircle}></View>{" "}
-                {feedback ? feedback : "Online"}
+              <Text style={styles.UserText}>
+                {selectedUser ? selectedUser.fullName : "User"}
               </Text>
+              {onlineUsers.includes(selectedUser._id) ? (
+                <Text style={styles.onlineText}>
+                  <View style={styles.OnlineCircle}></View> Online
+                </Text>
+              ) : (
+                <Text style={styles.onlineText}>Offline</Text>
+              )}
             </View>
-            <Image style={styles.Avatar} source={profile} />
+            <Image style={styles.Avatar} source={defaultImage} />
           </View>
         </View>
 
         <View style={styles.messageContainer}>
-          <ScrollView ref={scrollViewRef}>
-            {messageData.map((msg, index) => (
-              <View
-                key={index}
-                style={
-                  msg.isOwnMessage ? styles.sentMessage : styles.receivedMessage
-                }
-              >
-                <Text style={styles.msg}>{msg.text}</Text>
-                <Text style={styles.msgTime}>{msg.time}</Text>
-              </View>
-            ))}
-          </ScrollView>
+          {ismessageLoading ? (
+            <Loading />
+          ) : (
+            <ScrollView ref={scrollViewRef}>
+              {messages
+                .filter((message) => message && message.senderId)
+                .map((message) => (
+                  <View
+                    key={message._id}
+                    style={
+                      message.senderId === authUser._id
+                        ? styles.sentMessage
+                        : styles.receivedMessage
+                    }
+                  >
+                    <Text style={{ fontSize: 16, fontWeight: "600" }}>
+                      {message.senderId === selectedUser._id
+                        ? selectedUser.fullName
+                        : "You"}
+                    </Text>
+                    <Text style={styles.msg}>{message.text}</Text>
+                    <Text style={styles.msgTime}>
+                      {moment(message.createdAt).format("HH:mm")}
+                    </Text>
+                  </View>
+                ))}
+            </ScrollView>
+          )}
 
           <View style={styles.inputContainer}>
             <TextInput
@@ -212,7 +159,6 @@ const MessageScreen = () => {
     </SafeAreaView>
   );
 };
-
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
   header: {

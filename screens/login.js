@@ -19,6 +19,7 @@ import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { AuthContext } from "../src/navigation/Authcontext";
+import { useAuthStore } from "../src/store/useAuthstore";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -28,45 +29,20 @@ const Login = () => {
   const navigation = useNavigation();
   const { token, setToken } = useContext(AuthContext);
 
+const {login, isloggingIn} = useAuthStore()
 
+const userInput = { email, password };
+const validate = ()=>{
+if(!userInput.email) return Alert.alert("Email is Required");
+if(!userInput.password) return Alert.alert("Password is Required");
+if(userInput.password.length < 6) return Alert.alert("Password should be atleast 6 Characters")
+return true;
+}
   const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert("Error", "Please fill in all fields");
-      return;
-    }
-  
-    const userInput = { email, password };
-    setLoading(true);
-  
-    try {
-      const response = await axios.post("http://localhost:4800/api/login", userInput, {
-        timeout: 10000,
-      });
-  
-      const data = response.data;
-  
-      if (data?.token) {
-        await AsyncStorage.setItem("authToken", data.token);
-        await AsyncStorage.setItem('userId', data.user.id.toString()); 
-        await AsyncStorage.setItem('userName', data.user.name);
-        await AsyncStorage.setItem('userEmail', data.user.email);
-        setToken(data.token);
-        Alert.alert("Success", "Login successful!");
-  
-      } else {
-        Alert.alert("Error", data.message || "Failed to retrieve token from server");
-      }
-    } catch (error) {
-      console.error("Login Error:", error);
-      Alert.alert(
-        "Login Error",
-        error.response?.data?.message || "Network error: Unable to complete login"
-      );
-    } finally {
-      setLoading(false);
-    }
+  const success = validate();
+  if(success === true) {login(userInput);}
   };
-  
+
 
   return (
     <SafeAreaView style={styles.container}>
@@ -127,7 +103,7 @@ const Login = () => {
             onPress={handleLogin}
             disabled={loading}
           >
-            {loading ? (
+            {isloggingIn ? (
               <ActivityIndicator color="#fff" />
             ) : (
               <Text style={styles.loginButtonText}>Login</Text>

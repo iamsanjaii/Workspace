@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, Text, SafeAreaView, ScrollView, Image, TextInput } from 'react-native';
+import { StyleSheet, View, Text, SafeAreaView, ScrollView, Image, TextInput, TouchableOpacity } from 'react-native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import avatar from '../../../assets/man.png';
@@ -12,52 +12,20 @@ import User3 from '../../../assets/3.jpg';
 
 import Person from '../../components/Person';
 import Card from '../../components/Card';
+import { useAuthStore } from '../../store/useAuthstore';
+import { useNavigation } from '@react-navigation/native';
 
-const HomeScreen = ({ navigation }) => {
-  const [user, setUser] = useState(null);
-
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const token = await AsyncStorage.getItem('authToken');
-      const userId = await AsyncStorage.getItem('userId')
-
-        
-        if (!token || !userId) {
-          console.log('No token or userId found!');
-          return;
-        }
-        const response = await axios.get(`http://localhost:4800/user/${userId}`, {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          });
-
-        setUser(response.data); 
-      } catch (error) {
-        console.error('Error fetching user data:', error);
-      }
-    };
-
-    fetchUser();
-  }, []);
-
-  if (!user) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <Text>Loading...</Text>
-      </SafeAreaView>
-    );
-  }
+const HomeScreen = () => {
+  const { authUser, onlineUsers } = useAuthStore();
+  const navigation = useNavigation()
+  console.log(onlineUsers);
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.greetingsBar}>
-   
-
-          <Image source={user.avatar ? { uri: user.avatar } : avatar} style={styles.avatar} />
-          <Text style={styles.greetingsText}>Hello 👋, {user.name} </Text>
+          <Image source={avatar} style={styles.avatar} />
+          <Text style={styles.greetingsText}>Hello 👋, {authUser.fullName} </Text>
         </View>
 
         <View style={styles.searchBarContainer}>
@@ -65,9 +33,9 @@ const HomeScreen = ({ navigation }) => {
           <TextInput style={styles.searchBar} placeholder="Search" />
         </View>
 
-        <ScrollView 
-          horizontal 
-          contentContainerStyle={styles.peopleScrollContainer} 
+        <ScrollView
+          horizontal
+          contentContainerStyle={styles.peopleScrollContainer}
           showsHorizontalScrollIndicator={false}
         >
           <Person name="Sanjai" avatar={User2} />
@@ -80,7 +48,22 @@ const HomeScreen = ({ navigation }) => {
           <Person name="Sanjai" avatar={People} />
         </ScrollView>
 
-
+        <View style={styles.iconsContainer}>
+          <View style={styles.iconWrapper} >
+        <TouchableOpacity onPress={()=>navigation.navigate('Document')}>
+        <Icon name="cloud" size={40} color="#5553FC" />
+        <Text style={styles.iconText}>Drive</Text>
+        </TouchableOpacity>
+          </View>
+          <View style={styles.iconWrapper}>
+            <Icon name="file-text" size={40} color="#5553FC" />
+            <Text style={styles.iconText}>Document</Text>
+          </View>
+          <View style={styles.iconWrapper}>
+            <Icon name="video" size={40} color="#5553FC" />
+            <Text style={styles.iconText}>Meet</Text>
+          </View>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -88,7 +71,7 @@ const HomeScreen = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+
     backgroundColor: '#f9f9f9',
     margin: 10,
   },
@@ -139,6 +122,23 @@ const styles = StyleSheet.create({
   peopleScrollContainer: {
     flexDirection: 'row',
     paddingHorizontal: 20,
+    marginBottom: 20,
+  },
+  iconsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    width: '90%',
+    marginVertical: 20,
+  },
+  iconWrapper: {
+    alignItems: 'center',
+  },
+  iconText: {
+    marginTop: 5,
+    fontSize: 16,
+    color: '#5553FC',
+    fontWeight: '500',
   },
 });
 

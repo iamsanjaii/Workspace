@@ -11,6 +11,9 @@ import ChatScreen from './screens/chatScreen';
 import MeetScreen from './screens/meetScreen';
 import MessageScreen from '../components/messageScreen';
 import Newmessage from './screens/Newmessage';
+import Videochat from '../screens/videoCallUi';
+import Document from './screens/Document';
+import VideoChatScreen from './screens/videochatscreen';
 
 const homeName = "Home";
 const settingsName = "Settings";
@@ -34,10 +37,13 @@ const ChatStack = () => {
               component={MessageScreen} 
               options={{ headerShown: false, presentation:'fullScreenModal'}} 
           />
+
           <Stack.Screen name="NewMessage" component={Newmessage} options={{headerShown:false, presentation:'fullScreenModal'}}/>
+        
       </Stack.Navigator>
   );
 };
+
 
 export default function MainContainer() {
   return (

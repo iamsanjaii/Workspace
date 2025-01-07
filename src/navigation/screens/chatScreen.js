@@ -7,69 +7,29 @@ import User1 from '../../../assets/1.jpg';
 import User2 from '../../../assets/2.jpg';
 import User3 from '../../../assets/3.jpg';
 import avatar from '../../../assets/man.png';
+import { Image } from 'react-native';
 import Person from '../../components/Person';
-import ChatBox from '../../components/chatBox';
 import { useNavigation } from '@react-navigation/native';
-import axios from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuthStore } from '../../store/useAuthstore';
+import { useChatStore } from '../../store/useChatstore';
 
-const API_ENDPOINT = 'http://localhost:4800/api/search';
-const CHAT_ENDPOINT = 'http://localhost:4800/api/getAllMessages';
+
+
 
 const ChatScreen = () => {
     const navigation = useNavigation();
-    const [isloading, setisloading] = useState(false);
-    const [data, setData] = useState([]);
     const [fullData, setFullData] = useState([]);
-    const [error, setError] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
-    const [userId, setUserId] = useState('');
+    const [isloading, setisLoading] = useState('')
 
-    useEffect(() => {
-        const fetchUser = async () => {
-            try {
-                const userId = await AsyncStorage.getItem('userId');
-                setUserId(userId);
-            } catch (error) {
-                console.log("Error in getting sender's id", error);
-            }
-        };
-        fetchUser();
-    }, []);
+    const {onlineUsers} = useAuthStore()
+    const {getUsers, isUsersLoading,selectedUser, setSelectedUser, users} = useChatStore()
 
-    useEffect(() => {
-        if (userId) {
-            const fetchMessages = async () => {
-                try {
-                    const response = await axios.get(`${CHAT_ENDPOINT}?userId=${userId}`);
-                    const groupedMessages = getRecentMessages(response.data.data, userId);
-                    setData(groupedMessages);
-                    setFullData(groupedMessages);
-                } catch (error) {
-                    console.error('Error fetching messages:', error);
-                }
-            };
-            fetchMessages();
-        }
-    }, [userId]);
 
-    useEffect(() => {
-        setisloading(true);
-        fetchData(API_ENDPOINT);
-    }, []);
 
-    const fetchData = async (url) => {
-        try {
-            const response = await axios.get(url);
-            setData(response.data);
-            setFullData(response.data);
-        } catch (err) {
-            setError(err.message);
-        } finally {
-            setisloading(false);
-        }
-    };
-
+    useEffect(()=>{
+        getUsers()
+    },[getUsers])
     const handleSearch = (query) => {
         setSearchQuery(query);
         const filteredData = fullData.filter((item) =>
@@ -82,22 +42,7 @@ const ChatScreen = () => {
         navigation.navigate('NewMessage');
     };
 
-    const getRecentMessages = (messages, currentUserId) => {
-        const groupedMessages = messages.reduce((acc, message) => {
-            const key = message.is_own_message ? message.receiver_id : message.sender_id;
-            if (key === currentUserId) {
-                return acc;
-            }
 
-            if (!acc[key] || new Date(message.timestamp) > new Date(acc[key].timestamp)) {
-                acc[key] = message;
-            }
-
-            return acc;
-        }, {});
-
-        return Object.values(groupedMessages);
-    };
 
     if (isloading) {
         return (
@@ -131,18 +76,21 @@ const ChatScreen = () => {
                     <Person key="8" name="Sanjai" avatar={People} />
                 </ScrollView>
 
-                {data.map((message, index) => (
-                    <ChatBox
-                        key={index}
-                        name={message.is_own_message ? message.receiver_name.trim() : message.sender_name.trim()}
-                        avatar={Peter}
-                        navigation={navigation}
-                        timeStamp={message.timestamp}
-                        lastmessage={message.message}
-                        isown={message.is_own_message}
-                        allmessage={message}
-                    />
-                ))}
+                {users.map((user) => {
+                    return ( <TouchableOpacity onPress={()=>{setSelectedUser(user), navigation.navigate('Message')}}>
+                                <View style={styles.ChatContainer}>
+                                    <Image source={avatar ? avatar : defaultimage} style={styles.avatar} />
+                                    <View style={styles.chatTextContainer}>
+                                        <Text style={{ fontSize: 16, fontWeight: '600' }}>{user.fullName}</Text>
+                                        <Text style={{ fontSize: 12, fontWeight: '300', color: '#625F5F' }}>Hi Sanjai</Text>
+                                        <Text style={{ fontSize: 9, fontWeight: '400', color: '#625F5F', textAlign: 'right' }}>{onlineUsers.includes(user._id) ? "Online" : "Offline"}</Text>
+                                    </View>
+                                </View>
+                            </TouchableOpacity>)
+                }
+              
+                )}
+
             </ScrollView>
 
             <TouchableOpacity style={styles.floatingButton} onPress={() => { navigation.navigate('NewMessage'); }}>
@@ -244,6 +192,25 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.3,
         shadowRadius: 5,
     },
+    ChatContainer:{
+        marginTop:4,
+        backgroundColor:"#F0F0FF",
+        width: '100%',
+        flexDirection:'row',
+        paddingHorizontal: 14,
+        paddingVertical:8,
+        borderRadius:12
+    },
+    avatar: {
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+    },
+    chatTextContainer:{
+        flexDirection:'column',
+        paddingHorizontal:10,
+        flex:1
+    }
 });
 
 export default ChatScreen;

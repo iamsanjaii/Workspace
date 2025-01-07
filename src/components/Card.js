@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, View, Text } from 'react-native';
 
-const Card = ({name}) => {
+const Card = ({name ,since}) => {
 
 
     return (
@@ -15,7 +15,7 @@ const Card = ({name}) => {
                 <Text style={styles.cardDetails}>
                     {name}
                 </Text>
-                <Text style={styles.cardDetails}>VALID THRU: 12/25</Text>
+                <Text style={styles.cardDetails}>SINCE: {since}</Text>
             </View>
         </View>
     );

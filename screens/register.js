@@ -9,11 +9,17 @@ import {
   Image,
   Alert,
 } from "react-native";
-import React, { useState } from "react";
+import React, { useActionState, useReducer, useState } from "react";
 import { Feather } from "@expo/vector-icons";
 import googleLogo from "../assets/image.png";
 import { useNavigation } from "@react-navigation/native";
 import axios from 'axios';
+import { useAuthStore } from "../src/store/useAuthstore";
+import { ActivityIndicator } from "react-native"; 
+// import dotenv from 'dotenv';
+// dotenv.config()
+
+
 
 const Register = () => {
   const [name, setName] = useState("");
@@ -22,23 +28,30 @@ const Register = () => {
   const [password, setPassword] = useState("");
   const [passwordVisible, setPasswordVisible] = useState(true);
   const navigation = useNavigation();
+  const {signup, isSigningup} = useAuthStore();
 
-  
-
-function handleRegister(){
   const userData = {
-    name: name,
+    fullName: name,
     email: email,
-    mobile: mobile,
     password: password,
+  };
 
+
+
+
+  const validate =()=>{
+    if(!userData.fullName.trim()) return Alert.alert("Name is Required");
+    if(!userData.email.trim()) return Alert.alert("Email is Required")
+    if(!userData.password.trim()) return Alert.alert("password is Required")
+      if(userData.password.length < 6) return Alert.alert('Password length minimum atleast 6')
+
+    return true
   }
-  userData.email ?  navigation.navigate('OTP', {email:userData.email}) : Alert.alert("Enter Email")
-
- 
- axios.post('http://localhost:4800/api/register', userData).then(res => console.log(res.data)).catch(e => console.log(e))
-}
-
+  
+  const handleRegister = ()=>{
+const success = validate();
+if(success === true) signup(userData)
+  }
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
@@ -114,10 +127,17 @@ function handleRegister(){
               />
             </TouchableOpacity>
           </View>
-
-          <TouchableOpacity style={styles.loginButton} onPress={()=>handleRegister()}>
-            <Text style={styles.loginButtonText}>Create Account</Text>
-          </TouchableOpacity>
+          <TouchableOpacity
+  style={styles.loginButton}
+  onPress={() => handleRegister()}
+  disabled={isSigningup} 
+>
+  {isSigningup ? (
+    <ActivityIndicator size="small" color="#fff" />
+  ) : (
+    <Text style={styles.loginButtonText}>Create Account</Text>
+  )}
+</TouchableOpacity>
           <View style={styles.orContainer}>
             <View style={styles.orLine} />
             <Text style={styles.orLineText}>OR</Text>

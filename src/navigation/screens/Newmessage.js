@@ -2,41 +2,23 @@ import React, { useEffect, useState } from 'react';
 import { SafeAreaView, StyleSheet, View, TextInput, Text, Image, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import Icon2 from 'react-native-vector-icons/MaterialIcons';
-import axios from 'axios';
 import { useNavigation } from '@react-navigation/native';
 import defaultUser from '../../../assets/user.png'; 
-import MessageScreen from '../../components/messageScreen';
+import { useChatStore } from '../../store/useChatstore';
 
 const Newmessage = () => {
-    const API_ENDPOINT = "http://localhost:4800/api/getUsers";
+    const { getUsers, users, setSelectedUser } = useChatStore();
     const [searchQuery, setSearchQuery] = useState("");
-    const [data, setData] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
     const navigation = useNavigation();
 
     useEffect(() => {
-        const fetchData = async () => {
-            setIsLoading(true);
-            try {
-                const response = await axios.get(API_ENDPOINT);
-                setData(response.data.data);
-               
-            
-            } catch (err) {
-                setError(err.message);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        fetchData();
-    }, []);
-
-    const filteredData = data.filter((user) =>
-        user.name.trim().toLowerCase().includes(searchQuery.trim().toLowerCase())
+        getUsers();
+    }, [getUsers]);
+    const filteredData = users.filter((user) =>
+        user.fullName.toLowerCase().includes(searchQuery.toLowerCase())
     );
-
     if (isLoading) {
         return (
             <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
@@ -44,7 +26,6 @@ const Newmessage = () => {
             </View>
         );
     }
-
     if (error) {
         return (
             <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
@@ -69,20 +50,23 @@ const Newmessage = () => {
             </View>
 
             <ScrollView style={styles.userList}>
-                {filteredData.map((user) => (
-                  <TouchableOpacity onPress={()=>navigation.navigate('Message', { userName: user.name, id:user.id, profile:user.photo})}>
-                      <View key={user.id} style={styles.userCard}>
-                        <Image
-                            source={user.photo ? { uri: user.photo } : defaultUser}
-                            style={styles.avatar}
-                        />
-                        <View style={styles.userDetails}>
-                            <Text style={styles.userName}>{user.name.trim()}</Text>
-                            <Text style={styles.userMobile}>{user.mobile}</Text>
-                        </View>
-                    </View>
-                  </TouchableOpacity>
-                ))}
+                {filteredData.length > 0 ? (
+                    filteredData.map((user) => (
+                        <TouchableOpacity key={user._id} onPress={() => { navigation.navigate('Message'); setSelectedUser(user); }}>
+                            <View style={styles.userCard}>
+                                <Image
+                                    source={user.profilePic ? { uri: user.profilePic } : defaultUser}
+                                    style={styles.avatar}
+                                />
+                                <View style={styles.userDetails}>
+                                    <Text style={styles.userName}>{user.fullName}</Text>
+                                </View>
+                            </View>
+                        </TouchableOpacity>
+                    ))
+                ) : (
+                    <Text>No users found</Text>
+                )}
             </ScrollView>
         </SafeAreaView>
     );
@@ -115,14 +99,13 @@ const styles = StyleSheet.create({
     },
     userList: {
         marginTop: 10,
-        paddingHorizontal:15
+        paddingHorizontal: 15,
     },
     userCard: {
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: '#F0F0FF',
         padding: 15,
-
         borderRadius: 10,
         marginBottom: 10,
         shadowColor: '#000',
